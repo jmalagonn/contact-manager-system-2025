@@ -1,5 +1,6 @@
 # Python
 __pycache__/
+*.patch
 *.py[cod]
 *.pyo
 *.pyd
