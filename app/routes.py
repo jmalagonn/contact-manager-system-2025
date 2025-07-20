@@ -3,8 +3,10 @@
 from flask import Blueprint, request, jsonify, abort
 import bleach
 
-from . import db
-from .models import Contact
+from .services.contact_service import (
+    create_contact as svc_create_contact,
+    get_all_contacts,
+)
 
 
 main = Blueprint("main", __name__)
@@ -22,29 +24,22 @@ def create_contact():
     """Create a new contact."""
     payload = request.get_json(force=True, silent=True) or {}
 
-    first_name = _clean(payload.get("first_name"))
-    last_name = _clean(payload.get("last_name"))
-    middle_name = _clean(payload.get("middle_name"))
-    country_code = _clean(payload.get("country_code"))
-    city_code = payload.get("city_code")
-    phone_num = payload.get("phone_num")
-    email = _clean(payload.get("email"))
+    data = {
+        "first_name": _clean(payload.get("first_name")),
+        "last_name": _clean(payload.get("last_name")),
+        "middle_name": _clean(payload.get("middle_name")),
+        "country_code": _clean(payload.get("country_code")),
+        "city_code": payload.get("city_code"),
+        "phone_num": payload.get("phone_num"),
+        "email": _clean(payload.get("email")),
+    }
 
-    if not all([first_name, last_name, phone_num, email]):
+    if not all(
+        [data["first_name"], data["last_name"], data["phone_num"], data["email"]]
+    ):
         abort(400, "Missing required fields")
 
-    contact = Contact(
-        first_name=first_name,
-        last_name=last_name,
-        middle_name=middle_name,
-        country_code=country_code,
-        city_code=city_code,
-        phone_num=phone_num,
-        email=email,
-    )
-
-    db.session.add(contact)
-    db.session.commit()
+    contact = svc_create_contact(data)
 
     return jsonify(contact.to_dict()), 201
 
@@ -52,6 +47,12 @@ def create_contact():
 @main.route("/contacts", methods=["GET"])
 def list_contacts():
     """Return all stored contacts."""
-    contacts = Contact.query.all()
+    contacts = get_all_contacts()
     return jsonify([c.to_dict() for c in contacts])
 
+
+@main.route("/contacts/list", methods=["GET"])
+def get_contacts():
+    """Retrieve contacts from the database."""
+    contacts = get_all_contacts()
+    return jsonify([c.to_dict() for c in contacts])
